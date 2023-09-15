@@ -6,64 +6,77 @@ import { getLineHeight, getLongestLineLength, getTextHeight } from './math'
 import { drawBoundingBox } from './pencil'
 
 const DEFAULT_OPTIONS = {
-  fontSize: 20,
-  fontFamily: 'monospace',
-  padding: {
-    vertical: 20,
-    horizontal: 20
-  },
-  backgroundColor: '#000',
-  drawPaddingLines: false
+    fontSize: 20,
+    fontFamily: 'monospace',
+    padding: {
+        vertical: 20,
+        horizontal: 20
+    },
+    backgroundColor: '#000',
+    drawPaddingLines: false,
+    errorCodes: {
+      'TOO_BIG': {
+        'message': '',
+        'code': 501
+      }
+    },
 }
 
 export type CanvasRendererOptions = typeof DEFAULT_OPTIONS
 
 export function getCanvasRenderer<TCanvas extends HTMLCanvasElement | Canvas>(
-  canvas: TCanvas,
-  options: DeepPartial<CanvasRendererOptions> = {}
+    canvas: TCanvas,
+    options: DeepPartial<CanvasRendererOptions> = {}
 ) {
-  const config = merge(DEFAULT_OPTIONS, options)
-  const { fontSize, fontFamily, padding, backgroundColor } = config
+    const config = merge(DEFAULT_OPTIONS, options)
+    const { fontSize, fontFamily, padding, backgroundColor } = config
 
-  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D
-  if (!ctx) throw new Error('no canvas context')
+    const ctx = canvas.getContext('2d') as CanvasRenderingContext2D
+    if (!ctx) throw new Error('no canvas context')
 
-  return {
-    renderToCanvas(tokens: shiki.IThemedToken[][]) {
-      const longestLineLength = getLongestLineLength(
-        ctx,
-        tokens,
-        fontSize,
-        fontFamily
-      )
+    return {
+        renderToCanvas(tokens: shiki.IThemedToken[][]) {
+            const longestLineLength = getLongestLineLength(
+                ctx,
+                tokens,
+                fontSize,
+                fontFamily
+            )
 
-      canvas.width = longestLineLength + padding.horizontal * 2
-      canvas.height =
-        getTextHeight(ctx, fontSize, fontFamily, tokens) + padding.vertical * 2
+            canvas.width = longestLineLength + padding.horizontal * 2
+            canvas.height =
+                getTextHeight(ctx, fontSize, fontFamily, tokens) +
+                padding.vertical * 2
 
-      ctx.fillStyle = backgroundColor
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
+            const area = canvas.width * canvas.height;
 
-      if (config.drawPaddingLines) drawBoundingBox(ctx, padding)
+            if (area > 5_000_000) {
+              process.exit(options.errorCodes?.TOO_BIG?.code);
+            }
 
-      let y = padding.vertical
+            ctx.fillStyle = backgroundColor
+            ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-      for (const line of tokens) {
-        let x = padding.horizontal
+            if (config.drawPaddingLines) drawBoundingBox(ctx, padding)
 
-        for (const token of line) {
-          ctx.font = `${fontSize}px ${fontFamily}`
-          ctx.textBaseline = 'top'
-          ctx.fillStyle = token.color || '#fff'
-          ctx.fillText(token.content, x, y)
+            let y = padding.vertical
 
-          x += ctx.measureText(token.content).width
+            for (const line of tokens) {
+                let x = padding.horizontal
+
+                for (const token of line) {
+                    ctx.font = `${fontSize}px ${fontFamily}`
+                    ctx.textBaseline = 'top'
+                    ctx.fillStyle = token.color || '#fff'
+                    ctx.fillText(token.content, x, y)
+
+                    x += ctx.measureText(token.content).width
+                }
+
+                y += getLineHeight(ctx, fontSize, fontFamily, line)
+            }
+
+            return canvas
         }
-
-        y += getLineHeight(ctx, fontSize, fontFamily, line)
-      }
-
-      return canvas
     }
-  }
 }
