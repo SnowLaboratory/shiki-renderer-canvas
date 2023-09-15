@@ -14,6 +14,7 @@ const DEFAULT_OPTIONS = {
     },
     backgroundColor: '#000',
     drawPaddingLines: false,
+    maxPixels: 5_000_000,
     errorCodes: {
       'TOO_BIG': {
         'message': '',
@@ -50,8 +51,8 @@ export function getCanvasRenderer<TCanvas extends HTMLCanvasElement | Canvas>(
 
             const area = canvas.width * canvas.height;
 
-            if (area > 5_000_000) {
-              process.exit(options.errorCodes?.TOO_BIG?.code);
+            if (area > config.maxPixels) {
+              process.exit(config.errorCodes?.TOO_BIG?.code);
             }
 
             ctx.fillStyle = backgroundColor
